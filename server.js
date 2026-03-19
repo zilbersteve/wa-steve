@@ -139,41 +139,46 @@ Called number: ${to || 'unknown'}
 }
 
 async function askOpenAI(messages) {
-  const resp = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      input: messages,
-      max_output_tokens: 80,
-    }),
-  });
+  const lastUserMessage =
+    messages[messages.length - 1]?.content || 'say something';
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`OpenAI failed: ${resp.status} ${text}`);
+  try {
+    const resp = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        input: `You are Steve. Reply casually in 1-2 sentences.\nUser: ${lastUserMessage}`,
+        max_output_tokens: 60,
+      }),
+    });
+
+    const rawText = await resp.text();
+    console.log('OPENAI RAW:', rawText);
+
+    if (!resp.ok) {
+      throw new Error(rawText);
+    }
+
+    const data = JSON.parse(rawText);
+
+    let reply =
+      data.output_text ||
+      data?.output?.[0]?.content?.[0]?.text ||
+      null;
+
+    if (!reply || reply.trim() === '') {
+      reply = 'yo say that again';
+    }
+
+    return reply.trim();
+  } catch (err) {
+    console.error('OPENAI FAILURE:', err);
+    return 'yo say that again';
   }
-
-  const data = await resp.json();
-  console.log('OpenAI raw response:', JSON.stringify(data));
-
-  const outputText =
-    String(data.output_text || '').trim() ||
-    String(data?.output?.[0]?.content?.[0]?.text || '').trim() ||
-    String(
-      data?.output?.flatMap((item) => item?.content || [])
-        ?.find((c) => typeof c?.text === 'string')
-        ?.text || ''
-    ).trim();
-
-  if (!outputText) {
-    return 'wait say that again';
-  }
-
-  return outputText;
 }
 
 app.get('/healthz', (_req, res) => {
@@ -558,6 +563,7 @@ wss.on('connection', (ws) => {
       });
 
       const reply = await askOpenAI(convo.history);
+
       console.log('OpenAI reply:', reply);
 
       convo.history.push({
