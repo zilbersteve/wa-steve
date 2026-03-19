@@ -795,6 +795,9 @@ If the room needs:
 
 Getting the tone right matters more than saying something clever.
 
+Most responses should stay 1 to 2 short sentences.
+If a line lands, do not explain it.
+If a joke lands, move on immediately.
 
 
 ================================
