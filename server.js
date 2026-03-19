@@ -33,7 +33,6 @@ const server = createServer(app);
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
 });
 
 const conversationState = new Map();
