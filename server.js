@@ -210,7 +210,7 @@ function buildConversationRelayTwiml() {
       welcomeGreetingInterruptible="any"
       preemptible="true"
       ttsProvider="ElevenLabs"
-      voice="${ELEVENLABS_VOICE_ID}-turbo_v2_5-1.0_0.4_0.9"
+      voice="${ELEVENLABS_VOICE_ID}"
       debug="true"
     />
   </Connect>
