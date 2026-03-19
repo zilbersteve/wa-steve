@@ -150,8 +150,7 @@ async function askOpenAI(messages) {
         model: OPENAI_MODEL,
         messages,
         reasoning_effort: 'low',
-        max_completion_tokens: 220,
-        temperature: 0.7,
+        max_completion_tokens: 220
       }),
     });
 
@@ -165,19 +164,17 @@ async function askOpenAI(messages) {
     const data = JSON.parse(rawText);
 
     const reply =
-      data?.choices?.[0]?.message?.content?.trim() ||
-      data?.choices?.[0]?.delta?.content?.trim() ||
-      '';
+      data?.choices?.[0]?.message?.content?.trim() || '';
 
     if (!reply) {
       console.log('OPENAI EMPTY CONTENT');
-      return 'yo what’s up';
+      return 'hold on';
     }
 
     return reply;
   } catch (err) {
     console.error('OPENAI FAILURE:', err);
-    return 'yo what’s up';
+    return 'hold on';
   }
 }
 
