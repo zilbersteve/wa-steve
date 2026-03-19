@@ -209,8 +209,6 @@ function buildConversationRelayTwiml() {
       interruptible="any"
       welcomeGreetingInterruptible="any"
       preemptible="true"
-      ttsProvider="ElevenLabs"
-      voice="${ELEVENLABS_VOICE_ID}"
       debug="true"
     />
   </Connect>
