@@ -149,8 +149,7 @@ async function askOpenAI(messages) {
       body: JSON.stringify({
         model: OPENAI_MODEL,
         messages,
-        max_tokens: 80,
-        temperature: 0.7,
+        max_completion_tokens: 80,
       }),
     });
 
