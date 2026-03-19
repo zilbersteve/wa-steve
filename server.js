@@ -163,11 +163,13 @@ function buildConversationRelayTwiml() {
   <Connect>
     <ConversationRelay
       url="${escapeXml(`${wsUrl}/conversation-relay`)}"
+      ttsProvider="ElevenLabs"
+      voice="${escapeXml(ELEVENLABS_VOICE_ID)}"
+      language="en-US"
       welcomeGreeting="yo what up"
-      interruptible="any"
       welcomeGreetingInterruptible="any"
+      interruptible="any"
       preemptible="true"
-      debug="true"
     />
   </Connect>
 </Response>`;
