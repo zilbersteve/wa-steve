@@ -60,6 +60,15 @@ function cleanCaption(text, maxLen = 250) {
   return String(text || '').replace(/\s+/g, ' ').trim().slice(0, maxLen);
 }
 
+function escapeXml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function storeAudio(buffer, mimeType = 'audio/mpeg') {
   const id = crypto.randomUUID();
   audioCache.set(id, {
@@ -75,7 +84,7 @@ app.get('/healthz', (_req, res) => {
 });
 
 app.get('/', (_req, res) => {
-  res.send('AI Steve WhatsApp voice bridge is live');
+  res.send('AI Steve WhatsApp + Voice bridge is live');
 });
 
 app.get('/media/:id.mp3', (req, res) => {
@@ -170,6 +179,7 @@ function waitForAgentReply(ws, timeoutMs = 45000) {
           resolve(String(nestedText).trim());
         }
       } catch {
+        // ignore irrelevant frames
       }
     }
 
@@ -184,9 +194,10 @@ async function askElevenLabsAgentText(userText, fromNumber) {
 
   const prompt = `
 You are Steve.
-Reply naturally and casually like a real human texting.
+Reply naturally and casually like a real human.
 Keep most replies 1-3 sentences.
 Do not sound robotic or corporate.
+Be sharp, warm, casual, and human.
 Latest inbound message from ${fromNumber}:
 ${userText}
 `.trim();
@@ -248,8 +259,8 @@ async function generateVoiceMp3(text) {
           stability: 0.3,
           similarity_boost: 0.9,
           style: 0.2,
-          use_speaker_boost: true
-        }
+          use_speaker_boost: true,
+        },
       }),
     }
   );
@@ -299,6 +310,45 @@ async function sendWhatsAppText(to, text) {
   return await twilioClient.messages.create(payload);
 }
 
+async function buildVoiceTwiml(text) {
+  try {
+    const mp3 = await generateVoiceMp3(text);
+    const mediaUrl = storeAudio(mp3);
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Play>${escapeXml(mediaUrl)}</Play>
+</Response>`;
+  } catch (err) {
+    console.error('Voice TTS error, falling back to Twilio Say:', err);
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="alice">${escapeXml(text)}</Say>
+</Response>`;
+  }
+}
+
+async function handleVoice(req, res) {
+  try {
+    const from = String(req.body?.From || req.query?.From || '').trim();
+
+    const greeting = from
+      ? 'yo what up, you got steve. leave me a thought.'
+      : 'yo what up, you got steve.';
+
+    const twiml = await buildVoiceTwiml(greeting);
+    res.type('text/xml').send(twiml);
+  } catch (err) {
+    console.error('Voice webhook error:', err);
+    res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="alice">yo, something glitched on my side.</Say>
+</Response>`);
+  }
+}
+
+app.get('/voice', handleVoice);
+app.post('/voice', handleVoice);
+
 app.post('/whatsapp', async (req, res) => {
   const from = String(req.body.From || '').trim();
   const body = String(req.body.Body || '').trim();
@@ -337,5 +387,5 @@ app.post('/twilio/status', (req, res) => {
 });
 
 app.listen(Number(PORT), () => {
-  console.log(`AI Steve WhatsApp voice bridge listening on :${PORT}`);
+  console.log(`AI Steve WhatsApp + Voice bridge listening on :${PORT}`);
 });
