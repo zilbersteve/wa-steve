@@ -151,8 +151,18 @@ async function askOpenAI(messages) {
       },
       body: JSON.stringify({
         model: OPENAI_MODEL,
-        input: `You are Steve. Reply casually in 1-2 sentences.\nUser: ${lastUserMessage}`,
-        max_output_tokens: 60,
+        input: [
+          {
+            role: 'system',
+            content:
+              'You are Steve. Reply casually, naturally, and like a real human on a phone call. Keep it to 1-2 sentences.',
+          },
+          {
+            role: 'user',
+            content: lastUserMessage,
+          },
+        ],
+        max_output_tokens: 80,
       }),
     });
 
@@ -165,16 +175,39 @@ async function askOpenAI(messages) {
 
     const data = JSON.parse(rawText);
 
-    let reply =
-      data.output_text ||
-      data?.output?.[0]?.content?.[0]?.text ||
-      null;
+    let reply = '';
 
-    if (!reply || reply.trim() === '') {
-      reply = 'yo say that again';
+    if (typeof data.output_text === 'string' && data.output_text.trim()) {
+      reply = data.output_text.trim();
     }
 
-    return reply.trim();
+    if (!reply && Array.isArray(data.output)) {
+      for (const item of data.output) {
+        if (!Array.isArray(item.content)) continue;
+
+        for (const part of item.content) {
+          if (typeof part?.text === 'string' && part.text.trim()) {
+            reply = part.text.trim();
+            break;
+          }
+
+          if (typeof part?.output_text === 'string' && part.output_text.trim()) {
+            reply = part.output_text.trim();
+            break;
+          }
+        }
+
+        if (reply) break;
+      }
+    }
+
+    if (!reply) {
+      console.log('NO TEXT FOUND IN RESPONSE');
+      return 'yo say that again';
+    }
+
+    return reply;
+
   } catch (err) {
     console.error('OPENAI FAILURE:', err);
     return 'yo say that again';
