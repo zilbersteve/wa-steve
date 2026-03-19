@@ -139,11 +139,8 @@ Called number: ${to || 'unknown'}
 }
 
 async function askOpenAI(messages) {
-  const lastUserMessage =
-    messages[messages.length - 1]?.content || 'say something';
-
   try {
-    const resp = await fetch('https://api.openai.com/v1/responses', {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
@@ -151,18 +148,9 @@ async function askOpenAI(messages) {
       },
       body: JSON.stringify({
         model: OPENAI_MODEL,
-        input: [
-          {
-            role: 'system',
-            content:
-              'You are Steve. Reply casually, naturally, and like a real human on a phone call. Keep it to 1-2 sentences.',
-          },
-          {
-            role: 'user',
-            content: lastUserMessage,
-          },
-        ],
-        max_output_tokens: 80,
+        messages,
+        max_tokens: 80,
+        temperature: 0.7,
       }),
     });
 
@@ -175,39 +163,11 @@ async function askOpenAI(messages) {
 
     const data = JSON.parse(rawText);
 
-    let reply = '';
-
-    if (typeof data.output_text === 'string' && data.output_text.trim()) {
-      reply = data.output_text.trim();
-    }
-
-    if (!reply && Array.isArray(data.output)) {
-      for (const item of data.output) {
-        if (!Array.isArray(item.content)) continue;
-
-        for (const part of item.content) {
-          if (typeof part?.text === 'string' && part.text.trim()) {
-            reply = part.text.trim();
-            break;
-          }
-
-          if (typeof part?.output_text === 'string' && part.output_text.trim()) {
-            reply = part.output_text.trim();
-            break;
-          }
-        }
-
-        if (reply) break;
-      }
-    }
-
-    if (!reply) {
-      console.log('NO TEXT FOUND IN RESPONSE');
-      return 'yo say that again';
-    }
+    const reply =
+      data?.choices?.[0]?.message?.content?.trim() ||
+      'yo say that again';
 
     return reply;
-
   } catch (err) {
     console.error('OPENAI FAILURE:', err);
     return 'yo say that again';
@@ -596,7 +556,6 @@ wss.on('connection', (ws) => {
       });
 
       const reply = await askOpenAI(convo.history);
-
       console.log('OpenAI reply:', reply);
 
       convo.history.push({
